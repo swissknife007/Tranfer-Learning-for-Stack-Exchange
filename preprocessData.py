@@ -5,6 +5,7 @@ import csv
 from HTMLParser import HTMLParser
 import sys  
 import re
+import os
 
 # Change the default encoding
 reload(sys)  
@@ -51,6 +52,4 @@ inputFileName = ['biology.csv', 'cooking.csv', 'crypto.csv', 'diy.csv', 'robotic
 
 for i in range(len(inputFileName)):
     parseFile(inputFileName[i])
-
-
-
+    os.remove(inputFileName[i])

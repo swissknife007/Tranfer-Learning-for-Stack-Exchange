@@ -9,6 +9,12 @@ __pycache__/
 # CSV files
 *.csv
 
+# swap files
+*.swp
+
+# Folders
+ProcessedData/
+
 # Distribution / packaging
 .Python
 env/
