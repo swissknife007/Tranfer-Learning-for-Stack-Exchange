@@ -22,6 +22,7 @@ for FILE in ./*
 do
     echo $FILE
     sed -i 's/ \+/ /g' $FILE
+    sed -i '1d' $FILE
 done
 cd ..
 
