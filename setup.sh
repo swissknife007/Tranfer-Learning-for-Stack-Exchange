@@ -18,6 +18,11 @@ cp preprocessData.py UncompressedData/
 cd UncompressedData
 python preprocessData.py
 rm preprocessData.py
+for FILE in ./*
+do
+    echo $FILE
+    sed -i 's/ \+/ /g' $FILE
+done
 cd ..
 
 mv UncompressedData ProcessedData
