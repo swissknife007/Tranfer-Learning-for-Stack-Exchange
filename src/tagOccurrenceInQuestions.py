@@ -21,7 +21,7 @@ def getCountOfWordInSentence(sWord, sentence):
 
 
 def cleanSentence(sentence):
-    sentence = re.sub('\.', ' ', sentence).lower()
+    sentence = re.sub('[^A-Za-z0-9]+', ' ', sentence).lower()
     sentence = re.sub(' +', ' ', sentence)
     sentence = sentence.strip()
     return sentence
