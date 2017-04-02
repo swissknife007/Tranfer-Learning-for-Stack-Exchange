@@ -27,14 +27,14 @@ class HTMLSanitizer(HTMLParser):
 
     def handle_data(self, data):
         if self.currentTag != 'code':
-            data = re.sub('[^A-Za-z0-9-.]+', ' ', data)
+            data = re.sub('[^A-Za-z0-9.]+', ' ', data)
             self.fileHdl.write(data)
 
 
 
 def parseFile(fileName):
     with open(fileName) as f:
-        print fileName
+        print 'Processing: ' + fileName
         reader = csv.reader(f)
         splitFileName = fileName.split('.')
         splitFileName[0] = splitFileName[0] + '_processed'
@@ -42,10 +42,14 @@ def parseFile(fileName):
         with open(processedFileName, "w") as processedF:
             parser = HTMLSanitizer(processedF)
             for row in reader:
-                processedF.write(row[0] + ', ')
-                processedF.write('"' + re.sub('[^A-Za-z0-9-.]+', ' ', row[1]) + '", "')
+                #Id
+                processedF.write(row[0] + ',')
+                #Question name
+                processedF.write('"' + re.sub('[^A-Za-z0-9.]+', ' ', row[1]) + '","')
+                #Question content
                 parser.feed(row[2])
-                processedF.write('", ' + row[3] + "\n")
+                #Tags
+                processedF.write('","' + re.sub('[^A-Za-z0-9.]+', ' ', row[3]) + '"\n')
 
 
 inputFileName = ['biology.csv', 'cooking.csv', 'crypto.csv', 'diy.csv', 'robotics.csv', 'travel.csv']

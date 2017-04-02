@@ -1,4 +1,6 @@
 #!/bin/bash
+rm -rf UncompressedData
+rm -rf ProcessedData
 mkdir UncompressedData
 
 #!/bin/bash
