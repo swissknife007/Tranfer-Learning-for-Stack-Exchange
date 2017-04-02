@@ -4,6 +4,7 @@
 import csv
 from HTMLParser import HTMLParser
 import sys  
+import re
 
 # Change the default encoding
 reload(sys)  
@@ -25,6 +26,7 @@ class HTMLSanitizer(HTMLParser):
 
     def handle_data(self, data):
         if self.currentTag != 'code':
+            data = re.sub('[^A-Za-z0-9-.]+', ' ', data)
             self.fileHdl.write(data)
 
 
@@ -40,7 +42,7 @@ def parseFile(fileName):
             parser = HTMLSanitizer(processedF)
             for row in reader:
                 processedF.write(row[0] + ', ')
-                processedF.write('"' + row[1] + '", "')
+                processedF.write('"' + re.sub('[^A-Za-z0-9-.]+', ' ', row[1]) + '", "')
                 parser.feed(row[2])
                 processedF.write('", ' + row[3] + "\n")
 
