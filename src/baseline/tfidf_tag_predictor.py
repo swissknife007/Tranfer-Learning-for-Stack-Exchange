@@ -96,7 +96,7 @@ def get_vocabulary(documents):
 
 def compute_tfidf_baseline(rawData, topic):
     # titles = data_clean(rawData.title)
-    contents = data_clean(rawData.content)
+    contents = data_clean(rawData["title"])
     # (frequency, inverse_frequency) = get_frequency(titles)
     (frequency, inverse_frequency) = get_frequency(contents)
     tfidf_distribution = []
