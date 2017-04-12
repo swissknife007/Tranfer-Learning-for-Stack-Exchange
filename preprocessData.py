@@ -51,9 +51,33 @@ def parseFile(fileName):
                 #Tags
                 processedF.write('","' + re.sub('[^A-Za-z0-9.]+', ' ', row[3]) + '"\n')
 
+def parseTest(fileName):
+    with open(fileName) as f:
+        print 'Processing: ' + fileName
+        reader = csv.reader(f)
+        splitFileName = fileName.split('.')
+        splitFileName[0] = splitFileName[0] + '_processed'
+        processedFileName = '.'.join(splitFileName)
+        with open(processedFileName, "w") as processedF:
+            parser = HTMLSanitizer(processedF)
+            for row in reader:
+                #Id
+                processedF.write(row[0] + ',')
+                #Question name
+                processedF.write('"' + re.sub('[^A-Za-z0-9.]+', ' ', row[1]) + '","')
+                #Question content
+                parser.feed(row[2])
+                processedF.write('"\n')
+
 
 inputFileName = ['biology.csv', 'cooking.csv', 'crypto.csv', 'diy.csv', 'robotics.csv', 'travel.csv']
+testFileName = ['test.csv']
 
 for i in range(len(inputFileName)):
     parseFile(inputFileName[i])
     os.remove(inputFileName[i])
+
+
+for i in range(len(testFileName)):
+    parseTest(testFileName[i])
+    os.remove(testFileName[i])
