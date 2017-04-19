@@ -5,6 +5,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from collections import  Counter, defaultdict
 import sys
 import re
+import json
 
 from nltk import word_tokenize
 
@@ -33,6 +34,10 @@ domain_freq_unigrams_dict_title = dict()
 domain_freq_bigrams_dict_content = dict()
 domain_freq_bigrams_dict_title = dict()
 domain_tag_dict = dict()
+domain_doc_word_count_dict_content = dict()
+domain_doc_word_count_dict_title = dict()
+domain_doc_count_dict = dict()
+domain_max_word_dict = dict()
 
 def create_file_names():
     file_names.append(file_path + 'biology_processed.csv')
@@ -58,6 +63,10 @@ def init_pos_dicts ():
         domain_freq_bigrams_dict_content[get_domain_name(file_name)] = defaultdict(int)
         domain_freq_bigrams_dict_title[get_domain_name(file_name)] = defaultdict(int)
         domain_tag_dict[get_domain_name(file_name)] = defaultdict(int)
+        domain_doc_word_count_dict_content[get_domain_name(file_name)] = defaultdict(int)
+        domain_doc_word_count_dict_title[get_domain_name(file_name)] = defaultdict(int)
+        domain_doc_count_dict[get_domain_name(file_name)] = 0
+        domain_max_word_dict[get_domain_name(file_name)] = 0
 
 def get_freq_count_dict(text, n_gram):
     vectorizer = CountVectorizer(ngram_range=(n_gram, n_gram))
@@ -90,7 +99,7 @@ def countFrequencyOfWords(file_name, questionName, questionContent, tags):
     wordsInQuestionContent = word_tokenize(questionContent)
     '''
     domain_name = get_domain_name(file_name)
-
+    domain_doc_count_dict[domain_name] += 1
     questionName = questionName.strip().replace('.', ' ')
     questionContent = questionContent.strip().replace('.', ' ')
     wordsInQuestionName = questionName.split()
@@ -99,30 +108,77 @@ def countFrequencyOfWords(file_name, questionName, questionContent, tags):
     individualTags = tags.split(' ')
 
     for tag in individualTags:
-        domain_tag_dict[domain_name][clean_word(tag)] = 1
+        tag = clean_word(tag)
+        if (len(tag) == 0):
+            continue
+        domain_tag_dict[domain_name][tag] = 1
+
+    prev_word = '*'
+    setWordsInQuestionContent = set(wordsInQuestionContent)
+    setWordsInQuestionTitle = set(wordsInQuestionName)
+
+    for word in setWordsInQuestionContent:
+        domain_doc_word_count_dict_content[domain_name][word] += 1
+        domain_max_word_dict[domain_name] = max(domain_max_word_dict[domain_name], domain_doc_word_count_dict_content[domain_name][word])
+
+    for word in setWordsInQuestionTitle:
+        domain_doc_word_count_dict_title[domain_name][word] += 1
 
     prev_word = '*'
     for words in wordsInQuestionContent:
         words = clean_word(words)
+        if(len(word) == 0):
+            continue
 
         domain_freq_unigrams_dict_content[domain_name][words] += 1
         domain_freq_bigrams_dict_content[domain_name][(words, prev_word)] += 1
         prev_word = words
+
     prev_word = '*'
 
     for words in wordsInQuestionName:
         words = clean_word(words)
+        if (len(word) == 0):
+            continue
         domain_freq_unigrams_dict_title[domain_name][words] += 1
         domain_freq_bigrams_dict_title[domain_name][(words, prev_word)] += 1
         prev_word = words
 
     #return domain_freq_unigrams_dict_title, domain_freq_unigrams_dict_content, domain_freq_bigrams_dict_title, domain_freq_bigrams_dict_content
 
-def analyze_text(freq_dict, tag_dict, domain_file):
+def analyze_text(freq_dict, tag_dict, domain_file, domain_name):
 
     for tag in tag_dict:
         if tag in freq_dict:
             domain_file.write(tag +  " " + str(freq_dict[tag]) +'\n')
+    out_file = file(domain_name +  "_freq.csv", 'w')
+    for word in freq_dict:
+        out_file.write(word + " ," + str(freq_dict[word]) + "," + str(tag_dict.has_key(word)) + "\n" )
+
+def calculate_tfidf(domain_name):
+    out_file = file(domain_name + '_tfidf.txt', 'w')
+    out_file_top10 = file(domain_name + '_tfidf_top10.csv', 'w')
+    tf_idf = dict()
+    term_freq = domain_freq_unigrams_dict_content[domain_name]
+    idoc_freq = domain_doc_word_count_dict_content[domain_name]
+
+    print 'max', domain_max_word_dict[domain_name]
+    for word in term_freq:
+        tf = 0.5 + ( (1.00+ term_freq[word])/domain_max_word_dict[domain_name])
+        idf =  (1.00 + domain_doc_count_dict[domain_name]/(idoc_freq[word]+0.5))
+        tf_idf[word] = tf*idf
+
+    #tf_idf_reverse_dict = dict()
+
+    #for word in tf_idf:
+    #    tf_idf_reverse_dict[tf_idf[word]] = word
+
+    #tf_idf_reverse_dict = sorted(tf_idf_reverse_dict.keys())
+
+    for word in tf_idf:
+         out_file_top10.write(str(word) + "," + str(tf_idf[word]) + "," + str(domain_tag_dict[domain_name].has_key(word)) + '\n')
+    json.dump(tf_idf, out_file)
+    return tf_idf
 
 def read_csv_file(file_name):
 
@@ -163,6 +219,7 @@ for file_name in file_names:
     '''
     print("Domain name", domain_name)
     domain_file = file(domain_name+"tag_freq.txt", 'w')
-    analyze_text(domain_freq_unigrams_dict_title[domain_name], domain_tag_dict[domain_name], domain_file)
+    analyze_text(domain_freq_unigrams_dict_title[domain_name], domain_tag_dict[domain_name], domain_file, domain_name)
     domain_file.write(".............Content Frequencies.....")
-    analyze_text(domain_freq_unigrams_dict_content[domain_name], domain_tag_dict[domain_name], domain_file)
+    analyze_text(domain_freq_unigrams_dict_content[domain_name], domain_tag_dict[domain_name], domain_file, domain_name)
+    calculate_tfidf(domain_name)
