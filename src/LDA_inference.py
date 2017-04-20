@@ -8,7 +8,6 @@ from nltk.tokenize import RegexpTokenizer
 from stop_words import get_stop_words
 from collections import Counter
 from nltk.corpus import stopwords
-import distance
 
 
 
@@ -19,8 +18,6 @@ file_path = './../ProcessedData/'
 file_names = []
 
 
-def word_similarity(word1, word2):
-	return distance.levenshtein(word1.lower(), word2.lower())
     
 
 def create_file_names():
@@ -28,8 +25,8 @@ def create_file_names():
     #file_names.append(file_path + 'cooking_processed.csv')
     #file_names.append(file_path + 'crypto_processed.csv')
     #file_names.append(file_path + 'diy_processed.csv')
-    #file_names.append(file_path + 'robotics_processed.csv')
-    file_names.append(file_path + 'test_processed.csv')
+    file_names.append(file_path + 'robotics_processed.csv')
+    #file_names.append(file_path + 'test_processed.csv')
 
 tokenizer = RegexpTokenizer(r'\w+')
 
@@ -40,12 +37,13 @@ en_stop = get_stop_words('en')
 p_stemmer = PorterStemmer()
 
 
-def read_csv_file(file_ptr):
+def read_csv_file(file_ptr, return_tags = False):
 
     doc_set = []
     doc_set_titles = []
     doc_set_contents = []
     doc_ids = []
+    doc_tags = []
     #domain_name = get_domain_name(  file_name)
     #print("file_name", file_ptr)
     with open(file_ptr,'rU') as csvfile:
@@ -54,8 +52,8 @@ def read_csv_file(file_ptr):
         row_counter = 0
         for row in spamreader:
            row_counter += 1
-           #if(row_counter > 100):
-           #    break
+           if(row_counter > 10):
+               break
            questionContent = questionName = tags = ''
            for colnum, col in enumerate(row):
             if(colnum == 2):
@@ -63,22 +61,96 @@ def read_csv_file(file_ptr):
             if colnum == 1:
                 questionName = col
             if colnum == 3:
-                tags = col
+                tags = col.split()
             if colnum == 0:
 		q_id = col 
-           doc = questionName
+           doc = questionName + questionName + questionContent
            doc_set.append(doc)
            doc_set_titles.append(questionName)
            doc_set_contents.append(questionContent)
            doc_ids.append(q_id)
-    
-    return doc_set, doc_set_titles, doc_set_contents, doc_ids
+           doc_ids.append(tags)
+
+    if return_tags == False:
+ 	   return doc_set, doc_set_titles, doc_set_contents, doc_ids
+
+    return doc_set, doc_set_titles, doc_set_contents, doc_ids, doc_tags
 
 
+def train():
 
+	for file_name in file_names:
+		texts = []
+		doc_set, doc_titles,doc_content, _ ,  doc_tags = read_csv_file(file_name, True)
+		tag_dict = Counter()
+		title_dict = Counter()
+		content_dict = Counter()
+		title_tag_dict = Counter()
+		content_tag_dict = Counter()
+		mutual_tag_title_dict = dict()
+		mutual_tag_content_dict = dict()
+
+		for tag in doc_set:
+
+			tag_dict[tag] += 1
+		
+		for i in doc_titles:
+        
+       			raw = i.lower()
+        		tokens = tokenizer.tokenize(raw)
+
+       
+        		stopped_tokens = [i for i in tokens if not i in en_stop]
+	
+        		stopped_tokens = [word for word in stopped_tokens if word not in stopwords.words('english')]
+
+       			
+        		texts.append(stopped_tokens)
+			
+			for token in token_words:
+
+				title_dict[token] += 1
+						
+		for i in doc_content:
+        
+       			raw = i.lower()
+
+        		tokens = tokenizer.tokenize(raw)
+
+       
+        		stopped_tokens = [i for i in tokens if not i in en_stop]
+	
+        		stopped_tokens = [word for word in stopped_tokens if word not in stopwords.words('english')]
+
+       			
+        		texts.append(stopped_tokens)
+			
+			for token in token_words:
+
+				content_dict[token] += 1
+
+		
+		for token in title_dict:
+
+			token_dict[token] += 1
+
+			for tag in tag_dict:
+
+				title_tag_dict[(tag, token)] += 1
+
+					
+		for token in content_dict:
+
+			content_dict[token] += 1
+
+			for tag in tag_dict:
+
+				content_tag_dict[(tag, token)] += 1
+		
+		
+							
 create_file_names()
-
-
+train()
 
 
 for file_ptr in file_names:
@@ -97,7 +169,8 @@ for file_ptr in file_names:
         stopped_tokens = [i for i in tokens if not i in en_stop]
 	
         stopped_tokens = [word for word in stopped_tokens if word not in stopwords.words('english')]
-
+	
+	
         # stem tokens
         #stemmed_tokens = [p_stemmer.stem(i) for i in stopped_tokens]
 
@@ -111,7 +184,7 @@ for file_ptr in file_names:
     corpus = [dictionary.doc2bow(text) for text in texts]
     tfidf = models.TfidfModel(corpus)
     corpus_tfidf = tfidf[corpus]
-    num_topics = 40
+    num_topics = 10
     dict_words = Counter()
     ldamodel = gensim.models.ldamodel.LdaModel(corpus_tfidf, num_topics=num_topics, id2word=dictionary, passes=20)
 
@@ -127,8 +200,8 @@ for file_ptr in file_names:
     print(len(dict_words))
     _, doc_set_titles,doc_set_contents, doc_ids = read_csv_file(file_ptr)
 
-    output_file = file('submission_1.csv', 'w')
-    output_file.write("\"id\",\"tags\"\n")
+    output_file = file('submission_90.csv', 'w')
+    output_file.write("\"id\", \"tags\"\n")
 
     #print("doc size", len(doc_ids))
 
@@ -143,14 +216,14 @@ for file_ptr in file_names:
         #print("title_Words", title_words)
 
         for title_word in title_words:
-            for tag in dict_words:
-                 tag_dict[title_word] += word_similarity(title_word, tag)
+            if title_word in dict_words:
+                 tag_dict[title_word] += 1
 
         
         #print("content words", content_words)
         for content_word in content_words:
-            if tag in dict_words:
-                tag_dict[content_word] += 0.3 * word_similarity(content_word, tag)
+            if content_word in dict_words:
+                tag_dict[content_word] += 1
         #print(topic_terms)
     
     	predicted_tags = tag_dict.most_common(3)
