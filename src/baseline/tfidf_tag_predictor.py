@@ -111,7 +111,6 @@ def compute_tfidf_baseline(rawData, topic):
     contents = data_clean(rawData.content)
     assert len(titles) == len(contents), 'length mismatch!'
     title_contents = zip(titles, contents)
-    # (frequency, inverse_frequency) = get_frequency(titles)
     frequency, _, inverse_frequency = get_frequency(title_contents)
     tfidf_distribution = []
     ii = 0
