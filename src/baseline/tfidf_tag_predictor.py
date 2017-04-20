@@ -61,13 +61,23 @@ def parseFile(fileName):
 
 
 def get_frequency(documents):
-
     frequency = []
+    frequency_sizes = []
     inverse_frequency = {}
     for i in range(len(documents)):
+        title, content = documents[i]
+        word_ratio = len(content) / (len(title) + 1e-3)
+        if word_ratio == 0:
+            word_ratio = 1
         word_count = {}
 
-        for word in documents[i]:
+        for word in title:
+            if word in word_count:
+                word_count[word] = word_count[word] + word_ratio
+            else:
+                word_count[word] = word_ratio
+
+        for word in content:
             if word in word_count:
                 word_count[word] = word_count[word] + 1
             else:
@@ -78,9 +88,11 @@ def get_frequency(documents):
                 inverse_frequency[word] = inverse_frequency[word] + 1
             else:
                 inverse_frequency[word] = 1
+
+        frequency_sizes.append(len(content) + 20 * len(title))
         frequency.append(word_count)
 
-    return (frequency, inverse_frequency)
+    return (frequency, frequency_sizes, inverse_frequency)
 
 def get_vocabulary(documents):
     vocabulary = {}
@@ -95,23 +107,27 @@ def get_vocabulary(documents):
     return vocabulary
 
 def compute_tfidf_baseline(rawData, topic):
-    # titles = data_clean(rawData.title)
+    titles = data_clean(rawData.title)
     contents = data_clean(rawData.content)
+    assert len(titles) == len(contents), 'length mismatch!'
+    title_contents = zip(titles, contents)
     # (frequency, inverse_frequency) = get_frequency(titles)
-    (frequency, inverse_frequency) = get_frequency(contents)
+    frequency, _, inverse_frequency = get_frequency(title_contents)
     tfidf_distribution = []
+    ii = 0
     for document in frequency:
         if document == {}:
             continue
         max_frequency = sorted(document.items(), key = operator.itemgetter(1), reverse = True)[0][1]
         for word in document:
-            document[word] = document[word] / (max_frequency + 0.0) * np.log(len(frequency) / (inverse_frequency[word] + 0.))
+            document[word] = document[word] / (max_frequency + 1e-3) * np.log(len(frequency) / (inverse_frequency[word] + 1e-3))
             tfidf_distribution.append(document[word])
+        ii += 1
 
     index = 1
     sorted(frequency[index].items(), key = operator.itemgetter(1), reverse = True)
 
-    top = 8
+    top = 3
     output = []
     for i in range(0, len(rawData)):
         prediction = sorted(frequency[i], key = frequency[i].get, reverse = True)[0:top]
