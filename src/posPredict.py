@@ -9,6 +9,7 @@ import re
 import os
 import nltk
 
+
 # Change the default encoding
 reload(sys)  
 sys.setdefaultencoding('utf8')
@@ -16,6 +17,7 @@ sys.setdefaultencoding('utf8')
 #Uncomment the following line to print logs
 # printCountInfo = True
 printCountInfo = False
+
 
 
 def getCountOfWordInSentence(sWord, sentence):
@@ -103,20 +105,21 @@ def parseFile(fileName):
                 i = i + 1
                 ans = ans + word[0] + "(" + word[1] + ") "
                 ans2 = ans2 + word[1] + " "
-                for tag in row[3]:
-                    if (word[0] == row[3]):
+                for tag in row[3].split():
+                    if (word[0] == tag):
                         print "tag:" + word[0] + "," + str(i)
                         flag = True
-            if flag:
+            if flag and ans2.endswith("IN NN "):
                 print ans
                 print ans2
                 print "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
     #consolidateResults(countTagsDictionary, fileName)
 
-inputFileName = ['biology_processed.csv', 'cooking_processed.csv', 'crypto_processed.csv', 'diy_processed.csv', 'robotics_processed.csv', 'travel_processed.csv']
-#inputFileName = ['biology_processed.csv']
+#inputFileName = ['biology_processed.csv', 'cooking_processed.csv', 'crypto_processed.csv', 'diy_processed.csv', 'robotics_processed.csv', 'travel_processed.csv']
+inputFileName = ['cooking_processed.csv']
+
 
 for i in range(len(inputFileName)):
-    parseFile('../ProcessedData/' + inputFileName[i])
+   parseFile('../ProcessedData/' + inputFileName[i])
 
