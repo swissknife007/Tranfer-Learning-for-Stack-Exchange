@@ -95,13 +95,11 @@ def calculatePMIForAllDomains():
         #    print word
         #print 'XXXXXXXXXXXXXXXXX\n\n\n\n'
 
-        PMIForDomainName[domainName] = PMI
+        PMIForDomainName[domainName] = dict(PMISorted)
 
-    return PMIForDomainName
+    return PMIForDomainName, globalWordCount, globalTotalWordCount, wordCountInDomainName, wordCountInDomainName, totalWordsInDomainName
 
 
 
 for fileName in inputFileNameToDomainName:
     parseFile(fileName)
-
-calculatePMIForAllDomains()
