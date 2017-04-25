@@ -19,22 +19,11 @@ from sklearn.linear_model import RidgeCV
 reload(sys)  
 sys.setdefaultencoding('utf8')
 
-#Algorithm:
-#1) Choose m pivot features
-#2) Create m binary prediction problems... b_1, b_2, b_3...
-#3) for k = 1 to m; find wl such that wl * x = b_k
-#4) Create W = [w1|w2|w3|...]
-#5) U D V = svd(W) - Done
-#6) theta = U^T  (top h) - Done
-#7) Train predictor on  [X; theta * X], Y - Done
 
 
 
 
 
-def selectPivotFeatures():
-    pivotFeatures = []
-    return pivotFeatures;
 
 
 
@@ -102,8 +91,8 @@ def createPredictionProblems(pivotWord, tokenizedQuestionList, tags, vocabularyM
 def getTheta(pivotWords, tokenizedQuestionList, tags, h):
     WList = []
 
-    for i in xrange(1, len(pivotWords)):
-        Wpivot = createPredictionProblems(pivot, tokenizedQuestionList, tags)
+    for pivotWord in pivotWords
+        Wpivot = createPredictionProblems(pivotWord, tokenizedQuestionList, tags)
         WList.append(Wpivot)
 
     W = np.vstack(WList)
@@ -148,53 +137,35 @@ def addPadding(inputList, padLength):
 
 
 
+def getX(tokenizedQuestionList, vocabularyMap):
+    vocabLength = len(vocabularyMap)
 
-def getXY(tokenizedQuestionList, vocabularyMap, tagMap):
-    maxLength = -1
-    X = []
-    Y = []
+    X = np.zeros((len(tokenizedQuestionList), vocabLength)) 
+    pivotIndex = getWordIndex(pivotWord)
 
-    for i in xrange(0, len(tokenizedQuestionList)):
-        lenQuestion = len(tokenizedQuestionList[i])
-        if lenQuestion > maxLength:
-            maxLength = lenQuestion
-
-    for i in xrange(0, len(tokenizedQuestionList)):
-        tokenizedQuestion = tokenizedQuestionList[i]
-        lenQuestion = len(tokenizedQuestion)
-        padLength = maxLength - lenQuestion
-        x = []
-        y = []
-
+    for i, tokenizedQuestion in enumerate(tokenizedQuestionList):
         for word in tokenizedQuestion:
-            x.append(getWordIndex(word))
-            if word in tagMap:
-                y.append(1)
-            else:
-                y.append(0)
+            wordIndex = getWordIndex(word, vocabularyMap)
+            if wordIndex == 0:
+                continue
+            X[i, wordIndex] = 1
 
-        x = addPadding(x, padLength)
-        y = addPadding(y, padLength)
-
-        X.append(x)
-        Y.append(y)
-
-    return np.array(X), np.array(Y)
+    return X
 
 
 
 
 
-
-
-def createVocabularyMap(DSWords, pivotWords):
+def createVocabularyMapAndDSMap(DSWords, pivotWords):
     vocabularyMap = dict()
+    DSMap = dict()
     index = 1
 
     for word in DSWords:
         if word not in vocabularyMap:
             vocabularyMap[word] = index
             index = index + 1
+            DSMap[word] = index
 
     for word in pivotWords:
         if word not in vocabularyMap:
@@ -202,21 +173,56 @@ def createVocabularyMap(DSWords, pivotWords):
             index = index + 1
 
 
-    return vocabularyMap
+    return vocabularyMap, DSMap
 
 
 
 
 
-def trainPredictor(DSWords, pivotWords, tokenizedQuestionList, tags, h):
-    theta = getTheta(pivotWords, tokenizedQuestionList, tags, h)
-    tagMap = createTagMap(tags)
-    vocabularyMap = createVocabularyMap(DSWords, pivotWords)
-    X, Y = getXY(tokenizedQuestionList, vocabularyMap, tagMap)
-    forest = RandomForestClassifier(n_estimators=100, random_state=1)
-    multiOutputClassifier = MultiOutputClassifier(forest, n_jobs=-1)
-    thetaX = theta * X
-    XAugmented = np.concatenate(X, thetaX, axis = 0)
-    multiOutputClassifier.fit(XAugmented, Y).predict(XAugmented)
+def trainPredictor(DSWords, pivotWords, tokenizedQuestionListU, tokenizedQuestionListL, tags, h):
+    vocabularyMap, DSMap = createVocabularyMapAndDSMap(DSWords, pivotWords)
+    XU = getX(tokenizedQuestionListU, vocabularyMap)
+#    theta = getTheta(pivotWords, tokenizedQuestionListU, tags, h)
+#    tagMap = createTagMap(tags)
+#    vocabularyMap, DSMap = createVocabularyMapAndDSMap(DSWords, pivotWords)
+#    X, Y = getXY(tokenizedQuestionList, vocabularyMap, tagMap)
+#    forest = RandomForestClassifier(n_estimators=100, random_state=1)
+#    multiOutputClassifier = MultiOutputClassifier(forest, n_jobs=-1)
+#    thetaX = theta * X
+#    XAugmented = np.concatenate(X, thetaX, axis = 0)
+#    multiOutputClassifier.fit(XAugmented, Y).predict(XAugmented)
+
+
+
+
+#Algorithm:
+#1) Choose m pivot features
+#2) Create m binary prediction problems... b_1, b_2, b_3...
+#3) for k = 1 to m; find wl such that wl * x = b_k
+#4) Create W = [w1|w2|w3|...]
+#5) U D V = svd(W) - Done
+#6) theta = U^T  (top h) - Done
+#7) Train predictor on  [X; theta * X], Y - Done
+
+#def performSCL():
+
+
+
+
+#def getPivotWords():
+#    pivotFeatures = []
+#    return pivotFeatures;
+
+def getDomainSpecificWords(domainNames):
+    #Return dictionary of domain specific words for each domain
+
+def getPivotFeatures(sourceDomainUnlabeledQuestions, targetDomainUnlabeledQuestions)
+    #Return list of common pivot words
+
+def initialize():
+    domainNames = ['robotics', 'physics']
+    mapOfDomainWords = getDomainSpecificWords(domainNames) #mapOfDomainWords['physics'] = ['quantum', 'entanglement' .... ]
+
+
 
 
