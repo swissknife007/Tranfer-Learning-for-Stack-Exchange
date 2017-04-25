@@ -50,10 +50,10 @@ def parseFileSplitData(fileName, ratio_of_labeled = 0.5):
             questionContentList.append(questionContent)
             questionTagList.append(tagList)
 
-    num_labeled_rows = ratio_of_labeled * len(questionContentList)
+    num_labeled_rows = int(ratio_of_labeled * len(questionContentList))
 
-    labeled_data = zip(questionNameList[:num_labeled_rows], questionContentList[:num_labeled_rows], questionTagList[:num_labeled_rows])
+    labeled_data = (questionNameList[:num_labeled_rows], questionContentList[:num_labeled_rows], questionTagList[:num_labeled_rows])
 
-    unlabeled_data = zip(questionNameList[num_labeled_rows:], questionContentList[num_labeled_rows:])
+    unlabeled_data = (questionNameList[num_labeled_rows:], questionContentList[num_labeled_rows:])
 
     return labeled_data, unlabeled_data

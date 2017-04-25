@@ -59,7 +59,7 @@ def get_domain_words_union_tags(domain_name, num_domain_words):
         domain_words[word]  = 1
 
 
-    return domain_words
+    return list(domain_words.keys())
 
 
 
