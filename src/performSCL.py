@@ -213,6 +213,7 @@ def trainPredictor(DSWords, pivotWords, tokenizedQuestionListU, tokenizedQuestio
 #    pivotFeatures = []
 #    return pivotFeatures;
 
+
 def getDomainSpecificWords(domainNames):
     #Return dictionary of domain specific words for each domain
 
@@ -222,7 +223,5 @@ def getPivotFeatures(sourceDomainUnlabeledQuestions, targetDomainUnlabeledQuesti
 def initialize():
     domainNames = ['robotics', 'physics']
     mapOfDomainWords = getDomainSpecificWords(domainNames) #mapOfDomainWords['physics'] = ['quantum', 'entanglement' .... ]
-
-
 
 
