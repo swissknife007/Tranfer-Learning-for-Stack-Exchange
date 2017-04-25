@@ -3,6 +3,9 @@ from itertools import cycle, islice
 from operator import itemgetter
 from bolt.io import BinaryDataset
 
+'''
+Code for selecting pivots based on MI
+'''
 class MISelector(object):
     """Selects pivots according to mutual information.
 
