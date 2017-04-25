@@ -25,30 +25,6 @@ RootFolder='../ProcessedData/'
 inputFileNameToDomainName = {'biology_processed.csv':'biology' , 'cooking_processed.csv':'cooking', 'crypto_processed.csv':'crypto', 'diy_processed.csv':'diy', 'robotics_processed.csv':'robotics', 'travel_processed.csv':'travel', 'test_processed.csv':'physics'}
 #inputFileName = ['biology_processed.csv']
 
-def countFrequencyOfWords(questionName, questionContent, domainName, totalCount):
-    global globalTotalWordCount
-    wordCountInDomain = defaultdict(int)
-    totalCount = 0
-
-    wordsInQuestionName = questionName.split(' ')
-    wordsInQuestionContent = questionContent.split(' ')
-    
-    for word in wordsInQuestionName:
-        globalWordCount[word] = globalWordCount[word] + 1
-        wordCountInDomain[word] = wordCountInDomain[word] + 1
-        totalCount += 1
-        globalTotalWordCount += 1
-
-    for word in wordsInQuestionContent:
-        globalWordCount[word] = globalWordCount[word] + 1
-        wordCountInDomain[word] = wordCountInDomain[word] + 1
-        totalCount += 1
-        globalTotalWordCount += 1
-
-
-    wordCountInDomainName[domainName] = wordCountInDomain
-    totalWordsInDomainName[domainName] = totalCount
-
 
 def cleanSentence(sentence):
     sentence = re.sub('[^A-Za-z0-9]+', ' ', sentence).lower()
