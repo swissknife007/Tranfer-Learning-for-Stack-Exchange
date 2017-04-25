@@ -22,7 +22,7 @@ totalWordsInDomainName = defaultdict(int)
 PMIForDomainName = dict()
 
 RootFolder='../ProcessedData/' 
-inputFileNameToDomainName = {'biology_processed.csv':'biology' , 'cooking_processed.csv':'cooking', 'crypto_processed.csv':'crypto', 'diy_processed.csv':'diy', 'robotics_processed.csv':'robotics', 'travel_processed.csv':'travel'}
+inputFileNameToDomainName = {'biology_processed.csv':'biology' , 'cooking_processed.csv':'cooking', 'crypto_processed.csv':'crypto', 'diy_processed.csv':'diy', 'robotics_processed.csv':'robotics', 'travel_processed.csv':'travel', 'test_processed.csv':'physics'}
 #inputFileName = ['biology_processed.csv']
 
 def countFrequencyOfWords(questionName, questionContent, domainName, totalCount):
@@ -60,7 +60,7 @@ def cleanSentence(sentence):
 def parseFile(fileName):
     global globalTotalWordCount
     totalCount = 0
-    domainName = fileName
+    domainName = inputFileNameToDomainName[fileName]
 
     with open(RootFolder + fileName) as f:
         reader = csv.reader(f)
@@ -114,10 +114,10 @@ def calculatePMIForAllDomains():
                 PMI[word] = np.log(temp)
 
         PMISorted = sorted(PMI.items(), key=operator.itemgetter(1), reverse=True)
-        print domainName
-        for i, word in enumerate(PMISorted):
-            print word
-        print 'XXXXXXXXXXXXXXXXX\n\n\n\nAbhishek\n\n'
+        print "Processing:" + domainName
+        #for i, word in enumerate(PMISorted):
+        #    print word
+        #print 'XXXXXXXXXXXXXXXXX\n\n\n\n'
 
         PMIForDomainName[domainName] = PMI
 
