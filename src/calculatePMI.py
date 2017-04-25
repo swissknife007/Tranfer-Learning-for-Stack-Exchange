@@ -97,6 +97,8 @@ def calculatePMIForAllDomains():
 
         PMIForDomainName[domainName] = PMI
 
+    return PMIForDomainName
+
 
 
 for fileName in inputFileNameToDomainName:
