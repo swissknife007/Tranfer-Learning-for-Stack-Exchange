@@ -11,6 +11,7 @@ import sys
 import re
 import os
 import nltk
+from collections import OrderedDict
 
 reload(sys)  
 sys.setdefaultencoding('utf8')
@@ -95,7 +96,7 @@ def calculatePMIForAllDomains():
         #    print word
         #print 'XXXXXXXXXXXXXXXXX\n\n\n\n'
 
-        PMIForDomainName[domainName] = dict(PMISorted)
+        PMIForDomainName[domainName] = OrderedDict(PMISorted)
 
     return PMIForDomainName, globalWordCount, globalTotalWordCount, wordCountInDomainName, wordCountInDomainName, totalWordsInDomainName
 

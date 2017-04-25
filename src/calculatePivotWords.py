@@ -94,4 +94,4 @@ def getPivotWords(nWords):
     #TODO: return top nWords
 
 
-getPivotWords(100)
+#getPivotWords(100)

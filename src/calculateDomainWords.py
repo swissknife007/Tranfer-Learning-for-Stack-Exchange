@@ -43,6 +43,7 @@ def get_tags(domain_name):
     return tag_dict
 
 def get_domain_words_union_tags(domain_name, num_domain_words):
+    PMI_domains, _, _, _, _, _ = calculatePMIForAllDomains()
     PMI_domain = PMI_domains[domain_name]
     domain_tags = get_tags(domain_name)
     domain_words = dict()
@@ -61,7 +62,6 @@ def get_domain_words_union_tags(domain_name, num_domain_words):
     return domain_words
 
 
-PMI_domains = calculatePMIForAllDomains()
 
-tag_lines = get_domain_words_union_tags('cooking', 10)
-print tag_lines
+#tag_lines = get_domain_words_union_tags('physics', 100)
+#print tag_lines
