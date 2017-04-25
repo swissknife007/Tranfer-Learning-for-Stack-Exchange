@@ -18,6 +18,7 @@ cp preprocessData.py UncompressedData/
 cd UncompressedData
 python preprocessData.py
 rm preprocessData.py
+touch physics
 for FILE in ./*
 do
     echo $FILE
