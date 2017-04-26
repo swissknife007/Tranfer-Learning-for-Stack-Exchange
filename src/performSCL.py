@@ -99,18 +99,19 @@ def getXForTrainingPivotClassifiers(titleList, contentList, vocabularyMap):
 
 
 def getYFeaturePivotPresent(pivotWord, titleList, contentList):
-    present = 0
+    Y = np.zeros(len(titleList), 1)
 
-    for word in titleList:
-        if pivotWord == word:
+    for i in xrange(0, enumerate(titleList)):
+        present = 0
+        if pivotWord in titleList[i]:
             present = 1
-
-    if useContent:
-        for word in contentList:
-            if pivotWord == word:
+        if useContent:
+            if pivotWord in contentList[i]:
                 present = 1
 
-    return present
+        Y[i, 0] = present
+
+    return Y
 
 
 def getWeightVector(X, Y):
