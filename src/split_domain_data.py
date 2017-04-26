@@ -30,10 +30,28 @@ def cleanSentence(sentence):
     return sentence
 
 
+def parseTestFile(fileName):
+    questionNameList = []
+    questionContentList = []
+
+    with open(RootFolder + fileName) as f:
+        reader = csv.reader(f)
+        wordCountInDomain = defaultdict(int)
+
+        for row in reader:
+            questionName = cleanSentence(row[1])
+            questionContent = cleanSentence(row[2])
+            questionNameList.append(questionName)
+            questionContentList.append(questionContent)
+
+    return questionNameList, questionContentList
+
+
+
+
+
+
 def parseFileSplitData(fileName, ratio_of_labeled = 0.5):
-
-    domainName = inputFileNameToDomainName[fileName]
-
     questionNameList = []
     questionContentList = []
     questionTagList = []

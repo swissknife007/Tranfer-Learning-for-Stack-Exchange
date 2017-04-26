@@ -18,12 +18,24 @@ from sklearn.linear_model import RidgeCV
 from calculateDomainWords import get_domain_words_union_tags 
 from calculatePivotWords import getPivotWords
 from split_domain_data import parseFileSplitData
+from split_domain_data import parseTestFile
+
 
 reload(sys)  
 sys.setdefaultencoding('utf8')
 
+useContent = True
 
 
+def checkIfStringIsNum(string):
+    ret = True
+
+    try:
+        val = float(string)
+    except ValueError:
+        ret = False
+
+    return ret
 
 
 
@@ -37,6 +49,9 @@ inputFileNameToDomainName = {'robotics_processed.csv':'robotics'}
 numDomainWords = 10
 numPivotWords = 10
 trainingPerc = 0.5
+
+def getWordIndex(word, vocabularyMap):
+    return vocabularyMap.get(word, 0)
 
 def createVocabulary(pivotWords, sourceDomainWords, targetDomainWords):
     vocabulary = dict()
@@ -53,9 +68,96 @@ def createVocabulary(pivotWords, sourceDomainWords, targetDomainWords):
     return vocabulary
 
 
+def tokenize(sentence):
+    return sentence.split(' ')
+
+
+def getXForTrainingPivotClassifiers(titleList, contentList, vocabularyMap):
+    vocabLength = len(vocabularyMap)
+
+    X = np.zeros((len(titleList), vocabLength)) 
+
+    for i, questionTitle in enumerate(titleList):
+        for word in questionTitle:
+            wordIndex = getWordIndex(word, vocabularyMap)
+            if wordIndex == 0:
+                continue
+
+            X[i, wordIndex] += 1
+
+
+    if useContent:
+        for i, questionContent in enumerate(contentList):
+            for word in questionContent:
+                wordIndex = getWordIndex(word, vocabularyMap)
+                if wordIndex == 0:
+                    continue
+
+                X[i, wordIndex] += 1
+
+    return X
+
+
+def getYFeaturePivotPresent(pivotWord, titleList, contentList):
+    present = 0
+
+    for word in titleList:
+        if pivotWord == word:
+            present = 1
+
+    if useContent:
+        for word in contentList:
+            if pivotWord == word:
+                present = 1
+
+    return present
+
+
+def getWeightVector(X, Y):
+    ridgeCVFeaturePivotPresent = RidgeCV()
+    print X.shape
+    print Y.shape
+    ridgeCVFeaturePivotPresent.fit(X, Y)
+
+    return ridgeCVFeaturePivotPresent.coef_
+
+
+def getTheta(pivotWords, titleList, contentList, vocabularyMap, h):
+    WList = []
+
+    X = getXForTrainingPivotClassifiers(titleList, contentList, vocabularyMap)
+
+    for pivotWord in pivotWords:
+        print 'Training for pivot word '+pivotWord
+        XCopy = X.copy()
+        pivotIndex = getWordIndex(pivotWord, vocabularyMap)
+        XCopy[:, pivotIndex] = 0
+        print XCopy.shape
+
+        YFeaturePivotPresent = getYFeaturePivotPresent(pivotWord, titleList, contentList)
+
+        Wpivot = getWeightVector(XCopy, YFeaturePivotPresent)
+        print Wpivot
+        WList.append(Wpivot)
+
+    W = np.vstack(WList)
+    U, _, _ = sparsesvd(W.tocsc(), h)
+    theta = U.T
+
+    return theta
+
+
+
+
 def initialize():
     targetDomainName = 'physics'
     targetDomainWords = get_domain_words_union_tags(targetDomainName, numDomainWords)
+    unlabeledTargetTitleList, unlabeledTargetContentList = parseTestFile('test_processed.csv')
+
+    for i in range(0, len(unlabeledTargetTitleList)):
+        unlabeledTargetTitleList[i] = tokenize(unlabeledTargetTitleList[i])
+        unlabeledTargetContentList[i] = tokenize(unlabeledTargetContentList[i])
+
     pivotWords = getPivotWords(numPivotWords)
 
     for fileName in inputFileNameToDomainName:
@@ -66,8 +168,26 @@ def initialize():
         sourceDomainWords = get_domain_words_union_tags(domainName, numDomainWords)
         vocabulary = createVocabulary(pivotWords, sourceDomainWords, targetDomainWords)
         (XLabeled, XUnlabeled) = parseFileSplitData(fileName, trainingPerc)
-        labeledSourceTitleList, labeledSourceContentList, labeledSourceTags = XLabeled
+        labeledSourceTitleList, labeledSourceContentList, labeledSourceTagList = XLabeled
         unlabeledSourceTitleList, unlabeledSourceContentList = XUnlabeled
+
+        for i in range(0, len(labeledSourceTitleList)):
+            labeledSourceTitleList[i] = tokenize(labeledSourceTitleList[i])
+            labeledSourceContentList[i] = tokenize(labeledSourceContentList[i])
+
+        for i in range(0, len(unlabeledSourceTitleList)):
+            unlabeledSourceTitleList[i] = tokenize(unlabeledSourceTitleList[i])
+            unlabeledSourceContentList[i] = tokenize(unlabeledSourceContentList[i])
+
+
+        titleList = unlabeledTargetTitleList
+        titleList.extend(unlabeledSourceTitleList)
+        contentList = unlabeledTargetContentList
+        contentList.extend(unlabeledSourceContentList)
+
+        
+        h = 5
+        getTheta(pivotWords, titleList, contentList, vocabulary, h)
 
 
 
