@@ -19,6 +19,7 @@ from calculateDomainWords import get_domain_words_union_tags
 from calculatePivotWords import getPivotWords
 from split_domain_data import parseFileSplitData
 from split_domain_data import parseTestFile
+from sklearn import metrics
 import scipy
 
 
@@ -133,7 +134,7 @@ def getTheta(pivotWords, titleList, contentList, vocabularyMap, h):
     X = getX(titleList, contentList, vocabularyMap)
 
     for pivotWord in pivotWords:
-        #print 'Training for pivot word '+pivotWord
+        print 'Training for pivot word '+pivotWord
         XCopy = X.copy()
         pivotIndex = getWordIndex(pivotWord, vocabularyMap)
         XCopy[:, pivotIndex - 1] = 0
@@ -146,18 +147,22 @@ def getTheta(pivotWords, titleList, contentList, vocabularyMap, h):
         #print Wpivot
         #if(np.sum(Wpivot)):
         #    print("w pivot", np.sum(Wpivot))
-
-        WList.append(Wpivot)
-
-    W = np.vstack(WList)
+	print("Wpivot.shape", Wpivot.shape)
+        WList.append(Wpivot.reshape((len(Wpivot), 1)))
+	
+    W = np.concatenate(WList, axis = 1)
+    print("W.shape", W.shape)
     U, _, _ = scipy.sparse.linalg.svds(W, h)
+    
     theta = U.T
+     
+    print("theta shape", theta.shape)
 
     return theta, X
 
 
 def getY(tagListList, vocabulary):
-    Y = np.zeros(len(tagList), len(vocabulary))
+    Y = np.zeros((len(tagListList), len(vocabulary)))
 
     for i, tagList in enumerate(tagListList):
         for tag in tagList:
@@ -212,15 +217,18 @@ def initialize():
         contentList.extend(unlabeledSourceContentList)
 
         assert(len(contentList) == size1 + size2)
-        
+       
         h = 5
         theta, XU = getTheta(pivotWords, titleList, contentList, vocabulary, h)
-        XL = getX(labeledSourceTitleList, labeledSourceContentList)
-        XLAugmented = np.concatenate(XL, (theta * XL.T).T, axis = 1)
-        YL = getY(tagList, vocabulary)
+        XL = getX(labeledSourceTitleList, labeledSourceContentList, vocabulary)
+	print("XL.shape", XL.shape)        
+	XLAugmented = np.concatenate([XL, np.dot(theta, XL.T).T], axis = 1)
+        YL = getY(labeledSourceTagList, vocabulary)
         forest = RandomForestClassifier(n_estimators=100, random_state=1)
         multiOutputClassifier = MultiOutputClassifier(forest, n_jobs=-1)
-        print multiOutputClassifier.fit(XLAugmented, YL).predict(XLAugmented)
+        multiOutputClassifier.fit(XLAugmented, YL)
+        YPredicted = multiOutputClassifier.predict(XLAugmented)
+        print metrics.f1_score(YL, YPredicted, average='samples')
 
 
 
