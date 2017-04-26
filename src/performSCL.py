@@ -99,7 +99,7 @@ def getXForTrainingPivotClassifiers(titleList, contentList, vocabularyMap):
 
 
 def getYFeaturePivotPresent(pivotWord, titleList, contentList):
-    Y = np.zeros(len(titleList), 1)
+    Y = np.zeros((len(titleList), 1))
 
     for i in xrange(0, enumerate(titleList)):
         present = 0
