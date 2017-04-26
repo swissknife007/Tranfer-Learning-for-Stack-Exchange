@@ -47,8 +47,8 @@ inputFileNameToDomainName = {'robotics_processed.csv':'robotics'}
 
 
 
-numDomainWords = 1000
-numPivotWords = 1000
+numDomainWords = 10
+numPivotWords = 10
 trainingPerc = 0.5
 
 def getWordIndex(word, vocabularyMap):
@@ -75,7 +75,7 @@ def tokenize(sentence):
     return sentence.split(' ')
 
 
-def getXForTrainingPivotClassifiers(titleList, contentList, vocabularyMap):
+def getX(titleList, contentList, vocabularyMap):
     vocabLength = len(vocabularyMap)
 
     X = np.zeros((len(titleList), vocabLength)) 
@@ -98,7 +98,6 @@ def getXForTrainingPivotClassifiers(titleList, contentList, vocabularyMap):
 
                 X[i, wordIndex - 1] += 1
 
-    #print("sum", np.sum(X))
     return X
 
 
@@ -131,7 +130,7 @@ def getWeightVector(X, Y):
 def getTheta(pivotWords, titleList, contentList, vocabularyMap, h):
     WList = []
 
-    X = getXForTrainingPivotClassifiers(titleList, contentList, vocabularyMap)
+    X = getX(titleList, contentList, vocabularyMap)
 
     for pivotWord in pivotWords:
         #print 'Training for pivot word '+pivotWord
@@ -154,8 +153,19 @@ def getTheta(pivotWords, titleList, contentList, vocabularyMap, h):
     U, _, _ = scipy.sparse.linalg.svds(W, h)
     theta = U.T
 
-    return theta
+    return theta, X
 
+
+def getY(tagListList, vocabulary):
+    Y = np.zeros(len(tagList), len(vocabulary))
+
+    for i, tagList in enumerate(tagListList):
+        for tag in tagList:
+            index = getWordIndex(tag, vocabulary) - 1
+            Y[i, index] = 1
+
+
+    return Y
 
 
 
@@ -177,6 +187,7 @@ def initialize():
 
         sourceDomainWords = get_domain_words_union_tags(domainName, numDomainWords)
         vocabulary = createVocabulary(pivotWords, sourceDomainWords, targetDomainWords)
+
         (XLabeled, XUnlabeled) = parseFileSplitData(fileName, trainingPerc)
         labeledSourceTitleList, labeledSourceContentList, labeledSourceTagList = XLabeled
         unlabeledSourceTitleList, unlabeledSourceContentList = XUnlabeled
@@ -203,7 +214,14 @@ def initialize():
         assert(len(contentList) == size1 + size2)
         
         h = 5
-        getTheta(pivotWords, titleList, contentList, vocabulary, h)
+        theta, XU = getTheta(pivotWords, titleList, contentList, vocabulary, h)
+        XL = getX(labeledSourceTitleList, labeledSourceContentList)
+        XLAugmented = np.concatenate(XL, (theta * XL.T).T, axis = 1)
+        YL = getY(tagList, vocabulary)
+        forest = RandomForestClassifier(n_estimators=100, random_state=1)
+        multiOutputClassifier = MultiOutputClassifier(forest, n_jobs=-1)
+        print multiOutputClassifier.fit(XLAugmented, YL).predict(XLAugmented)
+
 
 
 
