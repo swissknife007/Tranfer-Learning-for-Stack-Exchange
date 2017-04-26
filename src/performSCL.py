@@ -166,8 +166,10 @@ def getY(tagListList, vocabulary):
 
     for i, tagList in enumerate(tagListList):
         for tag in tagList:
-            index = getWordIndex(tag, vocabulary) - 1
-            Y[i, index] = 1
+            index = getWordIndex(tag, vocabulary)
+            if index == 0:
+                continue
+            Y[i, index - 1] = 1
 
 
     return Y
@@ -221,8 +223,8 @@ def initialize():
         h = 5
         theta, XU = getTheta(pivotWords, titleList, contentList, vocabulary, h)
         XL = getX(labeledSourceTitleList, labeledSourceContentList, vocabulary)
-	print("XL.shape", XL.shape)        
-	XLAugmented = np.concatenate([XL, np.dot(theta, XL.T).T], axis = 1)
+        print("XL.shape", XL.shape)
+        XLAugmented = np.concatenate([XL, np.dot(theta, XL.T).T], axis = 1)
         YL = getY(labeledSourceTagList, vocabulary)
         forest = RandomForestClassifier(n_estimators=100, random_state=1)
         multiOutputClassifier = MultiOutputClassifier(forest, n_jobs=-1)
