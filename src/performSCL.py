@@ -14,11 +14,12 @@ import numpy as np
 from sparsesvd import sparsesvd
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import RidgeCV
+from sklearn.linear_model import RidgeCV, LogisticRegression
 from calculateDomainWords import get_domain_words_union_tags 
 from calculatePivotWords import getPivotWords
 from split_domain_data import parseFileSplitData
 from split_domain_data import parseTestFile
+import scipy
 
 
 reload(sys)  
@@ -46,12 +47,14 @@ inputFileNameToDomainName = {'robotics_processed.csv':'robotics'}
 
 
 
-numDomainWords = 10
-numPivotWords = 10
+numDomainWords = 1000
+numPivotWords = 1000
 trainingPerc = 0.5
 
 def getWordIndex(word, vocabularyMap):
-    return vocabularyMap.get(word, 0)
+    if word in vocabularyMap:
+        return vocabularyMap[word]
+    return 0
 
 def createVocabulary(pivotWords, sourceDomainWords, targetDomainWords):
     vocabulary = dict()
@@ -63,7 +66,7 @@ def createVocabulary(pivotWords, sourceDomainWords, targetDomainWords):
         for word in wordList:
             if word not in vocabulary:
                 vocabulary[word] = index
-                index + 1
+                index = index + 1
 
     return vocabulary
 
@@ -83,7 +86,7 @@ def getXForTrainingPivotClassifiers(titleList, contentList, vocabularyMap):
             if wordIndex == 0:
                 continue
 
-            X[i, wordIndex] += 1
+            X[i, wordIndex - 1] += 1
 
 
     if useContent:
@@ -93,15 +96,16 @@ def getXForTrainingPivotClassifiers(titleList, contentList, vocabularyMap):
                 if wordIndex == 0:
                     continue
 
-                X[i, wordIndex] += 1
+                X[i, wordIndex - 1] += 1
 
+    #print("sum", np.sum(X))
     return X
 
 
 def getYFeaturePivotPresent(pivotWord, titleList, contentList):
     Y = np.zeros((len(titleList), 1))
 
-    for i in xrange(0, enumerate(titleList)):
+    for i in xrange(0, len(titleList)):
         present = 0
         if pivotWord in titleList[i]:
             present = 1
@@ -116,8 +120,9 @@ def getYFeaturePivotPresent(pivotWord, titleList, contentList):
 
 def getWeightVector(X, Y):
     ridgeCVFeaturePivotPresent = RidgeCV()
-    print X.shape
-    print Y.shape
+    #print X.shape
+    #print Y.shape
+    #print("Y sum", np.sum(Y))
     ridgeCVFeaturePivotPresent.fit(X, Y)
 
     return ridgeCVFeaturePivotPresent.coef_
@@ -129,20 +134,24 @@ def getTheta(pivotWords, titleList, contentList, vocabularyMap, h):
     X = getXForTrainingPivotClassifiers(titleList, contentList, vocabularyMap)
 
     for pivotWord in pivotWords:
-        print 'Training for pivot word '+pivotWord
+        #print 'Training for pivot word '+pivotWord
         XCopy = X.copy()
         pivotIndex = getWordIndex(pivotWord, vocabularyMap)
-        XCopy[:, pivotIndex] = 0
-        print XCopy.shape
+        XCopy[:, pivotIndex - 1] = 0
+        #print XCopy.shape
 
         YFeaturePivotPresent = getYFeaturePivotPresent(pivotWord, titleList, contentList)
 
-        Wpivot = getWeightVector(XCopy, YFeaturePivotPresent)
-        print Wpivot
+        #print("Yfeature pivot shape", YFeaturePivotPresent.shape)
+        Wpivot = getWeightVector(XCopy, YFeaturePivotPresent.ravel())
+        #print Wpivot
+        #if(np.sum(Wpivot)):
+        #    print("w pivot", np.sum(Wpivot))
+
         WList.append(Wpivot)
 
     W = np.vstack(WList)
-    U, _, _ = sparsesvd(W.tocsc(), h)
+    U, _, _ = scipy.sparse.linalg.svds(W, h)
     theta = U.T
 
     return theta
@@ -182,10 +191,16 @@ def initialize():
 
 
         titleList = unlabeledTargetTitleList
+
         titleList.extend(unlabeledSourceTitleList)
+
+        size1 = len(unlabeledSourceContentList)
+        size2 = len(unlabeledTargetContentList)
+
         contentList = unlabeledTargetContentList
         contentList.extend(unlabeledSourceContentList)
 
+        assert(len(contentList) == size1 + size2)
         
         h = 5
         getTheta(pivotWords, titleList, contentList, vocabulary, h)
