@@ -14,7 +14,7 @@ import numpy as np
 from sparsesvd import sparsesvd
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import RidgeCV, LogisticRegression
+from sklearn.linear_model import RidgeCV, LogisticRegression, SGDClassifier
 from calculateDomainWords import get_domain_words_union_tags 
 from calculatePivotWords import getPivotWords
 from split_domain_data import parseFileSplitData
@@ -49,7 +49,7 @@ inputFileNameToDomainName = {'robotics_processed.csv':'robotics'}
 
 
 numDomainWords = 10
-numPivotWords = 10
+numPivotWords = 3
 trainingPerc = 0.5
 
 def getWordIndex(word, vocabularyMap):
@@ -87,7 +87,7 @@ def getX(titleList, contentList, vocabularyMap):
             if wordIndex == 0:
                 continue
 
-            X[i, wordIndex - 1] += 1
+            X[i, wordIndex - 1] = 1
 
 
     if useContent:
@@ -97,7 +97,7 @@ def getX(titleList, contentList, vocabularyMap):
                 if wordIndex == 0:
                     continue
 
-                X[i, wordIndex - 1] += 1
+                X[i, wordIndex - 1] = 1
 
     return X
 
@@ -119,13 +119,14 @@ def getYFeaturePivotPresent(pivotWord, titleList, contentList):
 
 
 def getWeightVector(X, Y):
-    ridgeCVFeaturePivotPresent = RidgeCV()
+    ridgeCVFeaturePivotPresent = SGDClassifier() #LogisticRegression() #RidgeCV()
     #print X.shape
     #print Y.shape
     #print("Y sum", np.sum(Y))
     ridgeCVFeaturePivotPresent.fit(X, Y)
+    print ridgeCVFeaturePivotPresent.coef_.shape
 
-    return ridgeCVFeaturePivotPresent.coef_
+    return ridgeCVFeaturePivotPresent.coef_.T
 
 
 def getTheta(pivotWords, titleList, contentList, vocabularyMap, h):
@@ -138,11 +139,11 @@ def getTheta(pivotWords, titleList, contentList, vocabularyMap, h):
         XCopy = X.copy()
         pivotIndex = getWordIndex(pivotWord, vocabularyMap)
         XCopy[:, pivotIndex - 1] = 0
-        #print XCopy.shape
+        print XCopy.shape
 
         YFeaturePivotPresent = getYFeaturePivotPresent(pivotWord, titleList, contentList)
 
-        #print("Yfeature pivot shape", YFeaturePivotPresent.shape)
+        print("Yfeature pivot shape", YFeaturePivotPresent.shape)
         Wpivot = getWeightVector(XCopy, YFeaturePivotPresent.ravel())
         #print Wpivot
         #if(np.sum(Wpivot)):
@@ -155,8 +156,11 @@ def getTheta(pivotWords, titleList, contentList, vocabularyMap, h):
     U, _, _ = scipy.sparse.linalg.svds(W, h)
     
     theta = U.T
+    print("U shape", U.shape)
+    print("W shape", W.shape)
      
     print("theta shape", theta.shape)
+    print("X.shape", X.shape)
 
     return theta, X
 
@@ -220,8 +224,9 @@ def initialize():
 
         assert(len(contentList) == size1 + size2)
        
-        h = 5
+        h = 2
         theta, XU = getTheta(pivotWords, titleList, contentList, vocabulary, h)
+        print np.dot(theta, theta.T)
         XL = getX(labeledSourceTitleList, labeledSourceContentList, vocabulary)
         print("XL.shape", XL.shape)
         XLAugmented = np.concatenate([XL, np.dot(theta, XL.T).T], axis = 1)
@@ -231,6 +236,22 @@ def initialize():
         multiOutputClassifier.fit(XLAugmented, YL)
         YPredicted = multiOutputClassifier.predict(XLAugmented)
         print metrics.f1_score(YL, YPredicted, average='samples')
+        XTest = getX(unlabeledTargetTitleList, unlabeledTargetContentList, vocabulary)
+        XTestAugmented = np.concatenate([XTest, np.dot(theta, XTest.T).T], axis = 1)
+        YTPredicted = multiOutputClassifier.predict(XTestAugmented)
+        indexToWordDict = dict((v, k) for k, v in vocabulary.iteritems())
+
+
+
+        for row in YTPredicted:
+            predictedTags = []
+            for i, ele in enumerate(row):
+				print ele
+				if ele != 0:
+					predictedTags.append(indexToWordDict[i + 1])
+        print ','.join(predictedTags) + "\n"
+
+				
 
 
 
