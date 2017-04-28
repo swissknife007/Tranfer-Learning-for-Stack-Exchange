@@ -173,20 +173,26 @@ for i in range(len(testFileName)):
 
 predY = crf.predict(dataXTest)
 
-#PMIForDomainName, globalWordCount, globalTotalWordCount, wordCountInDomainName, wordCountInDomainName, totalWordsInDomainName = calculatePMIForAllDomains()
+PMIForDomainName, _, _, _, _, _ = calculatePMIForAllDomains()
 
-i = -1
+
+
+PMI = PMIForDomainName['physics'] 
 
 tagMap = defaultdict(int)
 
+i = -1
 for tags in predY:
     i = i + 1
     j = -1
     for tag in tags:
         j = j + 1
 
-        if tag == '1':
-            tagMap[sentenceDataTest[i][j][0]] += 1
+        if tag == '1' and sentenceDataTest[i][j][0] in PMI:
+            print sentenceDataTest[i][j][0]
+            print PMI[sentenceDataTest[i][j][0]]
+            if PMI[sentenceDataTest[i][j][0]] > 2.25 and len(sentenceDataTest[i][j][0]) > 1:
+                tagMap[sentenceDataTest[i][j][0]] += 1
 
 
 i = -1
