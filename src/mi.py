@@ -12,6 +12,7 @@ import re
 import os
 import nltk
 from collections import OrderedDict
+from calculateDomainWords import get_domain_words_union_tags 
 
 reload(sys)  
 sys.setdefaultencoding('utf8')
@@ -26,12 +27,6 @@ RootFolder='../ProcessedData/'
 inputFileNameToDomainName = {'biology_processed.csv':'biology' , 'cooking_processed.csv':'cooking', 'crypto_processed.csv':'crypto', 'diy_processed.csv':'diy', 'robotics_processed.csv':'robotics', 'travel_processed.csv':'travel', 'test_processed.csv':'physics'}
 #inputFileName = ['biology_processed.csv']
 from calculatePivotWords import getPivotWords
-
-
-
-
-
-
 
 
 def cleanSentence(sentence):
@@ -58,18 +53,45 @@ def parseFile(fileName):
             wordsInQuestionName = questionName.split(' ')
             wordsInQuestionContent = questionContent.split(' ')
             
+            lastIndex = len(wordsInQuestionName) - 1
+            i = -1
             for word in wordsInQuestionName:
+                i += 1
                 globalWordCount[word] = globalWordCount[word] + 1
                 wordCountInDomain[word] = wordCountInDomain[word] + 1
                 totalCount += 1
                 globalTotalWordCount += 1
+                if i < lastIndex:
+                    bigram = word + '-' + wordsInQuestionName[i + 1]
+                    globalWordCount[bigram] = globalWordCount[bigram] + 1
+                    wordCountInDomain[bigram] = wordCountInDomain[bigram] + 1
+                    totalCount += 1
+                    globalTotalWordCount += 1
+                    if i < lastIndex - 1:
+                        tri = bigram + '-' + wordsInQuestionName[i + 2]
+                        globalWordCount[tri] = globalWordCount[tri] + 1
+                        wordCountInDomain[tri] = wordCountInDomain[tri] + 1
+                        totalCount += 1
+                        globalTotalWordCount += 1
 
-            for word in wordsInQuestionContent:
-                globalWordCount[word] = globalWordCount[word] + 1
-                wordCountInDomain[word] = wordCountInDomain[word] + 1
-                totalCount += 1
-                globalTotalWordCount += 1
 
+
+
+#            lastIndex = len(wordsInQuestionContent) - 1
+#            i = -1
+#            for word in wordsInQuestionContent:
+#                i += 1
+#                globalWordCount[word] = globalWordCount[word] + 1
+#                wordCountInDomain[word] = wordCountInDomain[word] + 1
+#                totalCount += 1
+#                globalTotalWordCount += 1
+#                if i < lastIndex:
+#                    bigram = word + '-' + wordsInQuestionContent[i + 1]
+#                    globalWordCount[bigram] = globalWordCount[bigram] + 1
+#                    wordCountInDomain[bigram] = wordCountInDomain[bigram] + 1
+#                    totalCount += 1
+#                    globalTotalWordCount += 1
+#
 
             wordCountInDomainName[domainName] = wordCountInDomain
             totalWordsInDomainName[domainName] = totalCount
@@ -107,6 +129,7 @@ def calculatePMIForAllDomains():
 def predictUsingMI(fileName):
     domainName = inputFileNameToDomainName[fileName]
     pivotWords = getPivotWords(['physics'], 2000)
+    domainWords = get_domain_words_union_tags('physics', 5000)
     PMI = PMIForDomainName[domainName]
     with open(RootFolder + fileName) as f:
         reader = csv.reader(f)
@@ -119,22 +142,41 @@ def predictUsingMI(fileName):
             wordsInQuestionContent = questionContent.split(' ')
             
             tagDict = dict()
+
+            i = -1
+            lastIndex = len(wordsInQuestionName) - 1
             for word in wordsInQuestionName:
+                i += 1
+                if word in pivotWords or word not in domainWords :
+                    continue
                 tagDict[word] = PMI[word]
+                if i < lastIndex and wordsInQuestionName[i + 1] not in pivotWords and  wordsInQuestionName[i + 1] in domainWords:
+                    tagDict[word + '-' + wordsInQuestionName[i + 1]] = PMI[word + '-' + wordsInQuestionName[i + 1]]
+                    if i < lastIndex - 1 and wordsInQuestionName[i + 1] not in pivotWords and  wordsInQuestionName[i + 1] in domainWords:
+                        tagDict[word + '-' + wordsInQuestionName[i + 1] + '-' + wordsInQuestionName[i + 2]] = PMI[word + '-' + wordsInQuestionName[i + 1] + '-' + wordsInQuestionName[i + 2]]
 
-            #for word in wordsInQuestionContent:
-            #    tagDict[word] = PMI[word]
 
+
+#            lastIndex = len(wordsInQuestionContent) - 1
+#            i = -1
+#            for word in wordsInQuestionContent:
+#                i += 1
+#                if word in pivotWords:
+#                    continue
+#                tagDict[word] = PMI[word]
+#                if i < lastIndex and wordsInQuestionContent[i + 1] not in pivotWords:
+#                    tagDict[word + '-' + wordsInQuestionContent[i + 1]] = PMI[word + '-' + wordsInQuestionContent[i + 1]]
+#
             tagCandidates = sorted(tagDict.items(), key=operator.itemgetter(1), reverse=True)
 
             j = 0
 
             predictedTags = []
             for word,val in tagCandidates:
-                if j > 2:
-                    break
+                #if j > 2:
+                 #   break
 
-                if word not in pivotWords and len(word) > 1:
+                if word not in pivotWords and len(word) > 1 and PMI[word] > 2.4:
                     j = j + 1
                     predictedTags.append(word)
 
