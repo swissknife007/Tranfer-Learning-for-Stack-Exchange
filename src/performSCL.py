@@ -231,7 +231,7 @@ def initialize():
         print("XL.shape", XL.shape)
         XLAugmented = np.concatenate([XL, np.dot(theta, XL.T).T], axis = 1)
         YL = getY(labeledSourceTagList, vocabulary)
-        forest = RandomForestClassifier(n_estimators=100, random_state=1)
+        forest = RandomForestClassifier(n_estimators=10)
         multiOutputClassifier = MultiOutputClassifier(forest, n_jobs=-1)
         multiOutputClassifier.fit(XLAugmented, YL)
         YPredicted = multiOutputClassifier.predict(XLAugmented)
@@ -246,10 +246,9 @@ def initialize():
         for row in YTPredicted:
             predictedTags = []
             for i, ele in enumerate(row):
-				print ele
 				if ele != 0:
 					predictedTags.append(indexToWordDict[i + 1])
-        print ','.join(predictedTags) + "\n"
+            print ','.join(predictedTags) + "\n"
 
 				
 

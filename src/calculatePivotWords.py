@@ -71,15 +71,31 @@ def getPivotCandidates(PMIForDomainName, globalVocab):
     return pivotCandidateDict
         
 
-def getPivotWords(nWords):
+def createVocabularyForDomainList(domainList, PMIForDomainName):
+    commonVocab = defaultdict(int)
+    for domainName in domainList:
+        PMI = PMIForDomainName[domainName]
+        for word in PMI:
+            if word not in commonVocab:
+                commonVocab[word] = 1
+
+    return commonVocab
+
+
+def getPivotWords(domainList, nWords):
     PMIForDomainName, globalWordCount, globalTotalWordCount, wordCountInDomainName, wordCountInDomainName, totalWordsInDomainName = calculatePMIForAllDomains()
     globalVocab = getGlobalVocabulary(PMIForDomainName)
     pivotCandidates = getPivotCandidates(PMIForDomainName, globalVocab)
-    pivotCandidatesSorted = sorted(pivotCandidates.items(), key=operator.itemgetter(1), reverse=False)[:nWords]
+    pivotCandidatesSorted = sorted(pivotCandidates.items(), key=operator.itemgetter(1), reverse=False)
     pivotList = []
+    commonVocab = createVocabularyForDomainList(domainList, PMIForDomainName)
+
     for word, variance in pivotCandidatesSorted:
         if nWords <= 0:
             break
+
+        if word not in commonVocab:
+            continue
 
         #print word
         #print variance

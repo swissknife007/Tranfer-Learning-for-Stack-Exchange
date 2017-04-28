@@ -62,7 +62,7 @@ def parseFileSplitData(fileName, ratio_of_labeled = 0.5):
         for row in reader:
             questionName = cleanSentence(row[1])
             questionContent = cleanSentence(row[2])
-            tagList = row[3]
+            tagList = cleanSentence(row[3])
             tagList = tagList.split()
             questionNameList.append(questionName)
             questionContentList.append(questionContent)
