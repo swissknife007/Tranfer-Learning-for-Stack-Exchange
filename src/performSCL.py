@@ -20,6 +20,7 @@ from calculatePivotWords import getPivotWords
 from split_domain_data import parseFileSplitData
 from split_domain_data import parseTestFile
 from sklearn import metrics
+from sklearn.linear_model import LassoCV
 import scipy
 
 
@@ -43,13 +44,13 @@ def checkIfStringIsNum(string):
 
 
 #inputFileNameToDomainName = {'biology_processed.csv':'biology' , 'cooking_processed.csv':'cooking', 'crypto_processed.csv':'crypto', 'diy_processed.csv':'diy', 'robotics_processed.csv':'robotics', 'travel_processed.csv':'travel', 'test_processed.csv':'physics'}
-inputFileNameToDomainName = {'robotics_processed.csv':'robotics'}
+inputFileNameToDomainName = {'cooking_processed.csv':'cooking'}
 
 
 
 
-numDomainWords = 10
-numPivotWords = 3
+numDomainWords = 50
+numPivotWords = 50
 trainingPerc = 0.5
 
 def getWordIndex(word, vocabularyMap):
@@ -58,18 +59,25 @@ def getWordIndex(word, vocabularyMap):
     return 0
 
 def createVocabulary(pivotWords, sourceDomainWords, targetDomainWords):
-    vocabulary = dict()
+    vocabulary = defaultdict(int)
+    dsVocab = defaultdict(int)
     index = 1
 
-    wordLists = [pivotWords, sourceDomainWords, targetDomainWords]
+    dsWordLists = [sourceDomainWords, targetDomainWords]
 
-    for wordList in wordLists:
+    for wordList in dsWordLists:
         for word in wordList:
             if word not in vocabulary:
                 vocabulary[word] = index
+                dsVocab[word] = index
                 index = index + 1
 
-    return vocabulary
+    for word in pivotWords:
+        if word not in vocabulary:
+            vocabulary[word] = index
+            index = index + 1
+
+    return dsVocab, vocabulary
 
 
 def tokenize(sentence):
@@ -87,7 +95,7 @@ def getX(titleList, contentList, vocabularyMap):
             if wordIndex == 0:
                 continue
 
-            X[i, wordIndex - 1] = 1
+            X[i, wordIndex - 1] += 1
 
 
     if useContent:
@@ -97,7 +105,7 @@ def getX(titleList, contentList, vocabularyMap):
                 if wordIndex == 0:
                     continue
 
-                X[i, wordIndex - 1] = 1
+                X[i, wordIndex - 1] += 1
 
     return X
 
@@ -119,7 +127,7 @@ def getYFeaturePivotPresent(pivotWord, titleList, contentList):
 
 
 def getWeightVector(X, Y):
-    ridgeCVFeaturePivotPresent = SGDClassifier() #LogisticRegression() #RidgeCV()
+    ridgeCVFeaturePivotPresent = SGDClassifier(loss='huber') #LogisticRegression() #RidgeCV()
     #print X.shape
     #print Y.shape
     #print("Y sum", np.sum(Y))
@@ -176,28 +184,40 @@ def getY(tagListList, vocabulary):
             Y[i, index - 1] = 1
 
 
+    for i in xrange(len(vocabulary)):
+        Y[len(tagListList) - 1][i] = 1
+
     return Y
 
 
 
 def initialize():
-    targetDomainName = 'physics'
+    global numPivotWords
+    targetDomainName = 'diy'
     targetDomainWords = get_domain_words_union_tags(targetDomainName, numDomainWords)
-    unlabeledTargetTitleList, unlabeledTargetContentList = parseTestFile('test_processed.csv')
+    (XTLabeled, XTUnlabeled) = parseFileSplitData('diy_processed.csv', trainingPerc)
+    labeledTargetTitleList, labeledTargetContentList, labeledTargetTagList = XTLabeled
+    unlabeledTargetTitleList, unlabeledTargetContentList = XTUnlabeled
 
     for i in range(0, len(unlabeledTargetTitleList)):
         unlabeledTargetTitleList[i] = tokenize(unlabeledTargetTitleList[i])
         unlabeledTargetContentList[i] = tokenize(unlabeledTargetContentList[i])
 
-    pivotWords = getPivotWords(numPivotWords)
+    for i in range(0, len(labeledTargetTitleList)):
+        labeledTargetTitleList[i] = tokenize(labeledTargetTitleList[i])
+        labeledTargetContentList[i] = tokenize(labeledTargetContentList[i])
+
 
     for fileName in inputFileNameToDomainName:
         domainName = inputFileNameToDomainName[fileName]
         if domainName == targetDomainName:
             continue
 
+        pivotWords = getPivotWords([targetDomainName, domainName], numPivotWords)
+        numPivotWords = len(pivotWords)
+
         sourceDomainWords = get_domain_words_union_tags(domainName, numDomainWords)
-        vocabulary = createVocabulary(pivotWords, sourceDomainWords, targetDomainWords)
+        dsVocab, vocabulary = createVocabulary(pivotWords, sourceDomainWords, targetDomainWords)
 
         (XLabeled, XUnlabeled) = parseFileSplitData(fileName, trainingPerc)
         labeledSourceTitleList, labeledSourceContentList, labeledSourceTagList = XLabeled
@@ -212,31 +232,43 @@ def initialize():
             unlabeledSourceContentList[i] = tokenize(unlabeledSourceContentList[i])
 
 
-        titleList = unlabeledTargetTitleList
+        titleList = unlabeledSourceTitleList
 
-        titleList.extend(unlabeledSourceTitleList)
+        titleList.extend(unlabeledTargetTitleList)
 
         size1 = len(unlabeledSourceContentList)
         size2 = len(unlabeledTargetContentList)
 
-        contentList = unlabeledTargetContentList
-        contentList.extend(unlabeledSourceContentList)
+        contentList = unlabeledSourceContentList
+        contentList.extend(unlabeledTargetContentList)
 
         assert(len(contentList) == size1 + size2)
        
-        h = 2
+        h = 20
+
+        if numPivotWords < h:
+            h = numPivotWords - 1
+
+        titleTrain = labeledSourceTitleList
+        titleTrain.extend(labeledTargetTitleList)
+
+        contentTrain = labeledSourceContentList
+        contentTrain.extend(labeledTargetContentList)
+        tagTrain = labeledSourceTagList
+        tagTrain.extend(labeledTargetTagList)
+
         theta, XU = getTheta(pivotWords, titleList, contentList, vocabulary, h)
         print np.dot(theta, theta.T)
-        XL = getX(labeledSourceTitleList, labeledSourceContentList, vocabulary)
+        XL = getX(titleTrain, contentTrain, vocabulary)
         print("XL.shape", XL.shape)
         XLAugmented = np.concatenate([XL, np.dot(theta, XL.T).T], axis = 1)
-        YL = getY(labeledSourceTagList, vocabulary)
-        forest = RandomForestClassifier(n_estimators=10)
-        multiOutputClassifier = MultiOutputClassifier(forest, n_jobs=-1)
+        YL = getY(tagTrain, dsVocab)
+        classifier = SGDClassifier(loss='huber')
+        multiOutputClassifier = MultiOutputClassifier(classifier, n_jobs=-1)
         multiOutputClassifier.fit(XLAugmented, YL)
         YPredicted = multiOutputClassifier.predict(XLAugmented)
         print metrics.f1_score(YL, YPredicted, average='samples')
-        XTest = getX(unlabeledTargetTitleList, unlabeledTargetContentList, vocabulary)
+        XTest = getX(titleList, contentList, vocabulary)
         XTestAugmented = np.concatenate([XTest, np.dot(theta, XTest.T).T], axis = 1)
         YTPredicted = multiOutputClassifier.predict(XTestAugmented)
         indexToWordDict = dict((v, k) for k, v in vocabulary.iteritems())
@@ -251,8 +283,6 @@ def initialize():
             print ','.join(predictedTags) + "\n"
 
 				
-
-
 
 
 
