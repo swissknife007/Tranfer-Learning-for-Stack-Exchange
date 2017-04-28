@@ -57,11 +57,11 @@ def parseFile(fileName):
                 totalCount += 1
                 globalTotalWordCount += 1
 
-            #for word in wordsInQuestionContent:
-            #    globalWordCount[word] = globalWordCount[word] + 1
-            #    wordCountInDomain[word] = wordCountInDomain[word] + 1
-            #    totalCount += 1
-            #    globalTotalWordCount += 1
+            for word in wordsInQuestionContent:
+                globalWordCount[word] = globalWordCount[word] + 1
+                wordCountInDomain[word] = wordCountInDomain[word] + 1
+                totalCount += 1
+                globalTotalWordCount += 1
 
 
             wordCountInDomainName[domainName] = wordCountInDomain
@@ -74,10 +74,10 @@ def calculatePMIForAllDomains():
     for domainName in wordCountInDomainName:
         wordCountInDomain = wordCountInDomainName[domainName]
         totalWords = totalWordsInDomainName[domainName]
-        PMI = dict()
+        PMI = defaultdict(int)
 
         for word in wordCountInDomain:
-            if wordCountInDomain[word] < 10:
+            if wordCountInDomain[word] < 5:
                 continue
             PwordDoc = float(wordCountInDomain[word])/totalWords
             Pword = float(globalWordCount[word])/globalTotalWordCount
